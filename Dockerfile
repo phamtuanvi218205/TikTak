@@ -1,35 +1,39 @@
 # ==========================================
-# BƯỚC 1: BUILD ỨNG DỤNG
+# BƯỚC 1: BUILD ỨNG DỤNG BẰNG MAVEN (JAVA 21)
 # ==========================================
-FROM maven:3.9.6-eclipse-temurin-22 AS build
+FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
 
-# Copy file pom.xml trước để tải thư viện (Cache bước này lại để build nhanh hơn)
+# Copy pom.xml và tải thư viện (Cache)
 COPY pom.xml .
 RUN mvn dependency:go-offline -B
 
-# Copy toàn bộ source code và tiến hành đóng gói
+# Copy source code và đóng gói
 COPY src ./src
 RUN mvn clean package -DskipTests
 
 # ==========================================
-# BƯỚC 2: CHẠY ỨNG DỤNG (MÔI TRƯỜNG RUNTIME)
+# BƯỚC 2: CHẠY ỨNG DỤNG (MÔI TRƯỜNG DEBIAN/UBUNTU)
 # ==========================================
-FROM eclipse-temurin:22-jre-alpine
+# Dùng bản jammy (Ubuntu 22.04) thay vì alpine để tương thích 100% với jave-all-deps
+FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 
-# Thiết lập múi giờ (Rất quan trọng cho app có tính năng chat/post video)
+# Thiết lập múi giờ Việt Nam
 ENV TZ=Asia/Ho_Chi_Minh
-RUN apk add --no-cache tzdata ffmpeg
 
-# Copy file jar từ Bước 1 sang
+# Cài đặt FFmpeg bằng apt-get (của Ubuntu/Debian) và dọn rác để giảm dung lượng
+RUN apt-get update \
+    && apt-get install -y ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy file jar từ bước build sang
 COPY --from=build /app/target/TikTok-0.0.1-SNAPSHOT.jar app.jar
 
-# Tạo thư mục chứa media và cấp quyền (tránh lỗi Permission Denied khi FFmpeg xuất file)
+# Tạo thư mục tạm và cấp quyền đọc/ghi
 RUN mkdir -p /app/uploads/video /app/uploads/images \
     && chmod -R 777 /app/uploads
 
 EXPOSE 8080
 
-# Chạy ứng dụng
 ENTRYPOINT ["java", "-jar", "app.jar"]
