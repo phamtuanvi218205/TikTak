@@ -10,6 +10,8 @@ import com.example.TikTok.mapper.VideoMapper;
 import com.example.TikTok.repository.*;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Value;
+import com.cloudinary.utils.ObjectUtils;
+import java.util.Map;
 
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
@@ -122,55 +124,101 @@ public class VideoService {
 
 
     }
-    //  HÀM UPLOAD CHÍNH
+    //  HÀM UPLOAD CHÍNH dung thuật toán nén video tạm cmt vì server render free không đủ ram để chạy
+//    public VideoResponse uploadVideo(UploadVideoRequest request) throws IOException {
+//        String currentUsername= SecurityContextHolder.getContext().getAuthentication().getName();
+//        User user= userRepository.findByUsername(currentUsername).orElseThrow(()->new RuntimeException("Lỗi người dùng không tồn tại"));
+//        MultipartFile file=request.getFile();
+//        if (file.isEmpty()) throw new RuntimeException("Chưa tải video lên");
+//        // Tạo thư mục nếu chưa có
+//        String projectDir = System.getProperty("user.dir");
+//        Path rootPath = Paths.get(projectDir, uploadDir, "video");
+//        if (!Files.exists(rootPath)) {
+//            Files.createDirectories(rootPath);
+//        }
+//        Path imagePath=Paths.get(projectDir,uploadDir,"images");
+//        if (!Files.exists(imagePath)){
+//            Files.createDirectories(imagePath);
+//        }
+//        String baseName= UUID.randomUUID().toString();
+//        String originalExt = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf("."));
+//        // File TẠM  -> lưu vào uploads/video/
+//        File sourceFile=new File(rootPath.toFile(),baseName+"_raw"+originalExt);
+//        // File ĐÍCH  -> lưu vào uploads/video/
+//        File targetFile=new File(rootPath.toFile(),baseName+".mp4");
+//        File thumbnailFile=new File(imagePath.toFile(),baseName+".png");
+//        String videoCloudUrl="";
+//        String thumbCloudUrl="https://via.placeholder.com/300x500.png?text=Thumbnail";
+//        try{
+//            // Lưu file gốc xuống ổ cứng
+//            file.transferTo(sourceFile);
+//            compressVideo(sourceFile,targetFile);
+//            extractThumbnail(sourceFile,thumbnailFile);
+//            // Đẩy file ĐÃ NÉN và ẢNH lên Cloudinary
+//            videoCloudUrl=cloudinaryService.uploadFile(targetFile);
+//            if (thumbnailFile.exists()){
+//                thumbCloudUrl = cloudinaryService.uploadFile(thumbnailFile);
+//            }
+//            if (sourceFile.exists()) sourceFile.delete();
+//            if (targetFile.exists()) targetFile.delete();
+//            if (thumbnailFile.exists()) thumbnailFile.delete();
+//        }catch (Exception e){
+//            // Nếu lỗi thì dọn dẹp cả 2 file
+//            if (sourceFile.exists()) sourceFile.delete();
+//            if (targetFile.exists()) targetFile.delete();
+//            if (thumbnailFile.exists()) thumbnailFile.delete();
+//            throw new RuntimeException("Lỗi xử lý video: " + e.getMessage());
+//        }
+//        // Lưu vào Database
+//
+//        Video video=Video.builder().title(request.getTitle()).videoUrl(videoCloudUrl).thumbnailUrl(thumbCloudUrl).user(user)
+//                .viewCount(0L).likeCount(0L).commentCount(0L).createdAt(LocalDateTime.now()).build();
+//        videoRepository.save(video);
+//        return videoMapper.toResponse(video);
+//    }
     public VideoResponse uploadVideo(UploadVideoRequest request) throws IOException {
         String currentUsername= SecurityContextHolder.getContext().getAuthentication().getName();
         User user= userRepository.findByUsername(currentUsername).orElseThrow(()->new RuntimeException("Lỗi người dùng không tồn tại"));
+
         MultipartFile file=request.getFile();
         if (file.isEmpty()) throw new RuntimeException("Chưa tải video lên");
-        // Tạo thư mục nếu chưa có
-        String projectDir = System.getProperty("user.dir");
-        Path rootPath = Paths.get(projectDir, uploadDir, "video");
-        if (!Files.exists(rootPath)) {
-            Files.createDirectories(rootPath);
-        }
-        Path imagePath=Paths.get(projectDir,uploadDir,"images");
-        if (!Files.exists(imagePath)){
-            Files.createDirectories(imagePath);
-        }
-        String baseName= UUID.randomUUID().toString();
-        String originalExt = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf("."));
-        // File TẠM  -> lưu vào uploads/video/
-        File sourceFile=new File(rootPath.toFile(),baseName+"_raw"+originalExt);
-        // File ĐÍCH  -> lưu vào uploads/video/
-        File targetFile=new File(rootPath.toFile(),baseName+".mp4");
-        File thumbnailFile=new File(imagePath.toFile(),baseName+".png");
+
         String videoCloudUrl="";
         String thumbCloudUrl="https://via.placeholder.com/300x500.png?text=Thumbnail";
-        try{
-            // Lưu file gốc xuống ổ cứng
-            file.transferTo(sourceFile);
-            compressVideo(sourceFile,targetFile);
-            extractThumbnail(sourceFile,thumbnailFile);
-            // Đẩy file ĐÃ NÉN và ẢNH lên Cloudinary
-            videoCloudUrl=cloudinaryService.uploadFile(targetFile);
-            if (thumbnailFile.exists()){
-                thumbCloudUrl = cloudinaryService.uploadFile(thumbnailFile);
-            }
-            if (sourceFile.exists()) sourceFile.delete();
-            if (targetFile.exists()) targetFile.delete();
-            if (thumbnailFile.exists()) thumbnailFile.delete();
-        }catch (Exception e){
-            // Nếu lỗi thì dọn dẹp cả 2 file
-            if (sourceFile.exists()) sourceFile.delete();
-            if (targetFile.exists()) targetFile.delete();
-            if (thumbnailFile.exists()) thumbnailFile.delete();
-            throw new RuntimeException("Lỗi xử lý video: " + e.getMessage());
-        }
-        // Lưu vào Database
 
-        Video video=Video.builder().title(request.getTitle()).videoUrl(videoCloudUrl).thumbnailUrl(thumbCloudUrl).user(user)
-                .viewCount(0L).likeCount(0L).commentCount(0L).createdAt(LocalDateTime.now()).build();
+        try {
+            // Đẩy trực tiếp byte array của file lên Cloudinary, ép kiểu là "video"
+            Map uploadResult = cloudinary.uploader().upload(file.getBytes(),
+                    ObjectUtils.asMap(
+                            "resource_type", "video",
+                            "folder", "tiktok_videos" // Gom vào một thư mục trên mây cho dễ quản lý
+                    ));
+
+            // Lấy link video gốc
+            videoCloudUrl = uploadResult.get("secure_url").toString();
+
+            // Lấy ID của video trên Cloudinary để tự động sinh ra link Thumbnail (Ảnh đại diện)
+            String publicId = uploadResult.get("public_id").toString();
+
+            // Ép Cloudinary tự động lấy khung hình của video và trả về dưới dạng file ảnh PNG
+            thumbCloudUrl = cloudinary.url().resourceType("video").format("png").generate(publicId);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi upload lên Cloudinary: " + e.getMessage());
+        }
+
+        // Lưu vào Database (Giữ nguyên logic cũ của bạn)
+        Video video=Video.builder()
+                .title(request.getTitle())
+                .videoUrl(videoCloudUrl)
+                .thumbnailUrl(thumbCloudUrl)
+                .user(user)
+                .viewCount(0L)
+                .likeCount(0L)
+                .commentCount(0L)
+                .createdAt(LocalDateTime.now())
+                .build();
+
         videoRepository.save(video);
         return videoMapper.toResponse(video);
     }
