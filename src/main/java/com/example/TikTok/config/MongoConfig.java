@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
-
+//mongodb+srv://chatdb:chatdb123456@chatdb.ryiyft8.mongodb.net/tiktok_chat?retryWrites=true&w=majority&appName=chatdb
 @Configuration
 @EnableMongoRepositories(basePackages = "com.example.TikTok.repository")
 public class MongoConfig {
@@ -14,7 +14,7 @@ public class MongoConfig {
     @Bean
     public MongoClient mongoClient() {
 
-        String connectionString = "mongodb+srv://chatdb:chatdb123456@chatdb.ryiyft8.mongodb.net/tiktok_chat?retryWrites=true&w=majority&appName=chatdb";
+        final String connectionString = System.getenv("Mongo_DB");
 
         System.out.println("🚀 ĐANG ÉP KẾT NỐI LÊN CLOUD ATLAS TẠI: chatdb.ryiyft8.mongodb.net");
         return MongoClients.create(connectionString);
