@@ -48,4 +48,8 @@ public class NotificationService {
     public   void deleteNotiFollow(User sender,NotificationType notificationType,User recipient){
         notificationRepository.deleteBySenderAndNotificationTypeAndRecipient(sender,notificationType,recipient);
     }
+    @Transactional
+    public void deleteComment(Comment cmt){
+        notificationRepository.deleteByComment(cmt);
+    }
 }

@@ -2,9 +2,7 @@ package com.example.TikTok.service;
 import com.cloudinary.Cloudinary;
 import com.example.TikTok.dto.request.UploadVideoRequest;
 import com.example.TikTok.dto.response.VideoResponse;
-import com.example.TikTok.entity.Like;
-import com.example.TikTok.entity.User;
-import com.example.TikTok.entity.Video;
+import com.example.TikTok.entity.*;
 import com.example.TikTok.enums.NotificationType;
 import com.example.TikTok.mapper.VideoMapper;
 import com.example.TikTok.repository.*;
@@ -50,6 +48,8 @@ public class VideoService {
     private final Cloudinary cloudinary;
     private final CloudinaryService cloudinaryService;
     private final NotificationService notificationService;
+    private final NotificationRepository notificationRepository;
+    private final SavedVideoRepository savedVideoRepository;
     @Value("${app.upload.dir}")
     private String uploadDir;
 
@@ -329,5 +329,60 @@ public class VideoService {
             return;
         }
         videoRepository.updateView(videoId);
+    }
+    private String extractPublicId(String url){
+        try{
+            //tim vi tri sau chu upload
+            String searchStr="/upload";
+            int uploadIndex=url.indexOf(searchStr);
+            if (uploadIndex==-1){
+                return null;
+            }
+            // lay phan sau upload
+            String postUpload=url.substring(uploadIndex+searchStr.length());
+            // loai bo chuoi version bang cach cat sau dau /
+            String pathWithOutVersion=postUpload.substring(postUpload.indexOf("/")+1);
+            // loai bo duoi file
+            int lastIndex=pathWithOutVersion.lastIndexOf(".");
+            if(lastIndex!=-1){
+                return pathWithOutVersion.substring(0,lastIndex);
+            }
+            return pathWithOutVersion;
+        }catch (Exception e) {
+            return null;
+        }
+    }
+    @Transactional
+    public void deleteVideo(Long videoId) {
+        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        Video video = videoRepository.findById(videoId)
+                .orElseThrow(() -> new RuntimeException("Video không còn tồn tại"));
+
+        if (!currentUsername.equals(video.getUser().getUsername())) {
+            throw new RuntimeException("Bạn không có quyền xóa video này");
+        }
+
+        // Xử lý xóa trên Cloudinary
+
+        String publicId = extractPublicId(video.getVideoUrl());
+
+        if (publicId != null) {
+            try {
+                // Lệnh hủy tài nguyên trên Cloudinary
+                // "resource_type" là "video" sẽ xóa cả file gốc và các thumbnail sinh ra từ nó
+                Map result = cloudinary.uploader().destroy(publicId, ObjectUtils.asMap(
+                        "resource_type", "video",
+                        "invalidate", true
+                ));
+
+                System.out.println("Kết quả xóa Cloudinary: " + result.get("result"));
+            } catch (IOException e) {
+
+                System.err.println("Không thể xóa file trên Cloudinary: " + e.getMessage());
+            }
+        }
+
+        videoRepository.delete(video);
     }
 }

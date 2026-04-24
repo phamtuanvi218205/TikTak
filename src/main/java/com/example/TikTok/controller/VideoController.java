@@ -62,4 +62,9 @@ public class VideoController {
     public ResponseEntity<Map<String,Object>> saveVideo(@PathVariable Long videoId){
         return ResponseEntity.ok(userService.savedVideo(videoId));
     }
+    @DeleteMapping("/{videoId}/delete")
+    public ResponseEntity<?> deleteVideo(@PathVariable Long videoId){
+        videoService.deleteVideo(videoId);
+        return ResponseEntity.ok().build();
+    }
 }

@@ -8,10 +8,7 @@ import com.example.TikTok.entity.User;
 import com.example.TikTok.entity.Video;
 import com.example.TikTok.enums.NotificationType;
 import com.example.TikTok.mapper.CommentMapper;
-import com.example.TikTok.repository.CommentRepository;
-import com.example.TikTok.repository.LikeCommentRepository;
-import com.example.TikTok.repository.UserRepository;
-import com.example.TikTok.repository.VideoRepository;
+import com.example.TikTok.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -36,6 +33,7 @@ public class CommentService {
     private final LikeCommentRepository likeCommentRepository;
     private final CommentMapper commentMapper;
     private final NotificationService notificationService;
+    private final NotificationRepository notificationRepository;
     //ĐỆ QUY Lấy bình luận con và Check Like
     private CommentResponse mapToResponseWithReplies(Comment comment, User currentUser){
         // Dùng Mapper chuyển đổi thông tin cơ bản
@@ -148,19 +146,26 @@ public class CommentService {
     public Long deleteComment(Long commentId){
         String userName=SecurityContextHolder.getContext().getAuthentication().getName();
         Comment cmt= commentRepository.findById(commentId).orElseThrow(()-> new RuntimeException("Comment này không còn tồn tại"));
-        Video v=videoRepository.findById(cmt.getVideo().getId()).orElseThrow(()-> new RuntimeException("Lỗi video không còn tồn tại"));
+        Video v=cmt.getVideo();
         if(!userName.equals(cmt.getUser().getUsername())&& !userName.equals(v.getUser().getUsername())){
-            throw  new RuntimeException("Cmt của ta ai cho xóa ba");
+            throw  new RuntimeException("Comment của người khác không có quyền xóa");
         }
-
-
         long totalDeleted=countCmtToDelete(cmt);
+        deleteAllNotification(cmt);
         Long newCount=Math.max(0,v.getCommentCount()-totalDeleted);
         v.setCommentCount(newCount);
         commentRepository.delete(cmt);
         videoRepository.save(v);
         return newCount;
 
+    }
+    private void deleteAllNotification(Comment cmt){
+        notificationService.deleteComment(cmt);
+        if(cmt.getReplies()!=null && !cmt.getReplies().isEmpty()){
+            for(Comment rep : cmt.getReplies()){
+                deleteAllNotification(rep);
+            }
+        }
     }
 
     private long countCmtToDelete(Comment cmt){
@@ -172,4 +177,5 @@ public class CommentService {
         }
         return count;
     }
+
 }
