@@ -1,10 +1,12 @@
 package com.example.TikTok.service;
 
+import com.example.TikTok.dto.response.NotificationResponse;
 import com.example.TikTok.entity.Comment;
 import com.example.TikTok.entity.Notification;
 import com.example.TikTok.entity.User;
 import com.example.TikTok.entity.Video;
 import com.example.TikTok.enums.NotificationType;
+import com.example.TikTok.mapper.NotificationMapper;
 import com.example.TikTok.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class NotificationService {
     private final NotificationRepository notificationRepository;
+    private final NotificationMapper notificationMapper;
     public  void createNotification(User sender, User recipient, NotificationType notificationType, Comment cmt, Video video){
         if (sender.getId()== recipient.getId()){
             return;
@@ -25,10 +28,10 @@ public class NotificationService {
         Notification newNoti= Notification.builder().sender(sender).recipient(recipient).comment(cmt).video(video).notificationType(notificationType).build();
         notificationRepository.save(newNoti);
     }
-    public Page<Notification> getUserNotifications(User recipient, int page, int size){
+    public Page<NotificationResponse> getUserNotifications(User recipient, int page, int size){
         Pageable pageable= PageRequest.of(page,size, Sort.by("createdAt").descending());
         Page<Notification> lstNotification=notificationRepository.findAllByRecipient(recipient,pageable);
-        return lstNotification;
+        return lstNotification.map(notificationMapper::toResponse);
     }
     public Long getUnreadCount(User recipient){
         return notificationRepository.countByRecipientAndReadFalse(recipient);

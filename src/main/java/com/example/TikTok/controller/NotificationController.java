@@ -38,12 +38,12 @@ public class NotificationController {
             @RequestParam(defaultValue = "10") int size) {
 
         User currentUser = getCurrentUser();
-        Page<Notification> notifications = notificationService.getUserNotifications(currentUser, page, size);
+        Page<NotificationResponse> notifications = notificationService.getUserNotifications(currentUser, page, size);
 
 
-        Page<NotificationResponse> responsePage = notifications.map(notificationMapper::toResponse);
 
-        return ResponseEntity.ok(responsePage);
+
+        return ResponseEntity.ok(notifications);
     }
 
 

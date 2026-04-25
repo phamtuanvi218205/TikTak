@@ -15,6 +15,7 @@ public interface NotificationMapper {
     @Mapping(target = "senderAvatar", source = "sender.avatar")
     @Mapping(target = "videoId", source = "video.id")
     @Mapping(target = "commentId", source = "comment.id")
+    @Mapping(target = "commentContent", source = "comment.content")
     NotificationResponse toResponse(Notification notification);
 
     List<NotificationResponse> lstResponse(List<Notification> notifications);
