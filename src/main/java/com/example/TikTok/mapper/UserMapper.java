@@ -1,10 +1,13 @@
 package com.example.TikTok.mapper;
 
 import com.example.TikTok.dto.request.RegisterRequest;
+import com.example.TikTok.dto.response.FollowerResponse;
 import com.example.TikTok.dto.response.ProfileResponse;
 import com.example.TikTok.entity.User;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+
+import java.util.List;
 
 
 @Mapper(componentModel="spring")
@@ -24,4 +27,12 @@ public interface UserMapper {
     @Mapping(target = "bio", source = "bio", defaultValue = "Chưa có tiểu sử")
 
     ProfileResponse toProfileResponse (User user);
+
+    @Mapping(target = "username", source = "username")
+    @Mapping(target = "fullname", source = "fullname")
+    @Mapping(target = "avatar", source = "avatar")
+    @Mapping(target = "id", source = "id")
+    @Mapping(target = "isFollowedByMe", ignore = true)
+    FollowerResponse toFollowerResponse(User user);
+
 }

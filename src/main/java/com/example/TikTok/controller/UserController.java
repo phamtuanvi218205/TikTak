@@ -1,12 +1,10 @@
 package com.example.TikTok.controller;
 
 import com.example.TikTok.dto.request.UpdateBioRequest;
-import com.example.TikTok.dto.response.BlockResponse;
-import com.example.TikTok.dto.response.ProfileResponse;
-import com.example.TikTok.dto.response.UploadAvatarResponse;
-import com.example.TikTok.dto.response.VideoResponse;
+import com.example.TikTok.dto.response.*;
 import com.example.TikTok.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -55,5 +53,20 @@ public class UserController {
     @GetMapping("/{username}/profile/saved")
     public ResponseEntity<List<VideoResponse>> getSaved(@PathVariable String username, @RequestParam(defaultValue = "0") int page,@RequestParam(defaultValue = "15") int size){
         return ResponseEntity.ok(userService.getSavedVideo(username,page,size));
+    }
+
+    @GetMapping("/{username}/followers")
+    public ResponseEntity<Page<FollowerResponse>> getListFollower(
+            @PathVariable String username,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "15") int size) {
+        return ResponseEntity.ok(userService.getListFollower(username, page, size));
+    }
+
+
+    @GetMapping("/{username}/following")
+    public ResponseEntity<List<FollowerResponse>> getFollowing(
+            @PathVariable String username) {
+        return ResponseEntity.ok(userService.getFollowing(username));
     }
 }

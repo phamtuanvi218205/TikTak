@@ -21,8 +21,6 @@ public class ProfileResponse {
 
     private boolean isFollowed;
     private boolean isBlocked;
-
-
 }
 
 

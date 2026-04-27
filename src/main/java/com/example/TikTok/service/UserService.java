@@ -1,10 +1,7 @@
 package com.example.TikTok.service;
 
 import com.example.TikTok.dto.request.UpdateBioRequest;
-import com.example.TikTok.dto.response.BlockResponse;
-import com.example.TikTok.dto.response.ProfileResponse;
-import com.example.TikTok.dto.response.UploadAvatarResponse;
-import com.example.TikTok.dto.response.VideoResponse;
+import com.example.TikTok.dto.response.*;
 import com.example.TikTok.entity.*;
 import com.example.TikTok.enums.NotificationType;
 import com.example.TikTok.mapper.UserMapper;
@@ -15,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -264,5 +262,55 @@ public class UserService {
             return response;
         }).collect(Collectors.toList());
     }
+    public Page<FollowerResponse> getListFollower(String targetUsername, int page, int size){
+        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
 
+        if (currentUsername == null || !currentUsername.equals(targetUsername)) {
+            throw new RuntimeException("Bạn không có quyền xem danh sách follower của người khác");
+        }
+        User targetUser=userRepository.findByUsername(targetUsername).orElseThrow(() -> new RuntimeException("Người dùng không tồn tại"));
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Follow> pageFollower = followRepository.findByFollowing(targetUser, pageable);
+        List<FollowerResponse> lstResponse=new ArrayList<>();
+        User currentUser = null;
+        if (!currentUsername.equals("anonymousUser")) {
+            currentUser = userRepository.findByUsername(currentUsername).orElse(null);
+        }
+        for(Follow f : pageFollower.getContent()){
+            User followerUser= f.getFollower();
+            FollowerResponse response=userMapper.toFollowerResponse(followerUser);
+            boolean isFollowed=false;
+            if(currentUser!=null&&(currentUser.getId())!=(followerUser.getId())){
+                isFollowed=followRepository.existsByFollowerAndFollowing(currentUser,followerUser);
+            }
+            response.setFollowedByMe(isFollowed);
+            lstResponse.add(response);
+        }
+        return new PageImpl<>(lstResponse, pageable, pageFollower.getTotalElements());
+    }
+    public List<FollowerResponse> getFollowing(String targetUsername){
+        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        if (currentUsername == null || !currentUsername.equals(targetUsername)) {
+            throw new RuntimeException("Bạn không có quyền xem danh sách following của người khác");
+        }
+        User targetUser=userRepository.findByUsername(targetUsername).orElseThrow(()->new RuntimeException("Người dùng không tồn tại"));
+        List<FollowerResponse> lstFollow=new ArrayList<>();
+        User currentUser = null;
+        if (!currentUsername.equals("anonymousUser")) {
+            currentUser = userRepository.findByUsername(currentUsername).orElse(null);
+        }
+        List<Follow> lstFollowing=followRepository.findByFollower(targetUser);
+        for(Follow f: lstFollowing){
+            User following=f.getFollowing();
+            FollowerResponse response=userMapper.toFollowerResponse(following);
+            boolean isFollowed=false;
+            if(currentUser!=null&&currentUser.getId()!=following.getId()){
+                isFollowed=followRepository.existsByFollowerAndFollowing(currentUser,following);
+            }
+            response.setFollowedByMe(isFollowed);
+            lstFollow.add(response);
+        }
+        return lstFollow;
+    }
 }
