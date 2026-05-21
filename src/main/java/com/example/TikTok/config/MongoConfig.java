@@ -15,8 +15,6 @@ public class MongoConfig {
     public MongoClient mongoClient() {
 
         final String connectionString = System.getenv("Mongo_DB");
-
-        System.out.println("🚀 ĐANG ÉP KẾT NỐI LÊN CLOUD ATLAS TẠI: chatdb.ryiyft8.mongodb.net");
         return MongoClients.create(connectionString);
     }
 

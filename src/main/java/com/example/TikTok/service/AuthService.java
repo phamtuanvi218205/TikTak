@@ -95,7 +95,6 @@ public class AuthService {
         token.setOtp(otp);
         token.setExpiryDate(LocalDateTime.now().plusMinutes(5));
         passwordResetTokenRepository.save(token);
-
         emailService.sendMail(email,"Mã xác thực quên mật khẩu TikTok",
                 "Mã OTP của bạn là: " + otp + "\nMã này sẽ hết hạn sau 5 phút."
         );
