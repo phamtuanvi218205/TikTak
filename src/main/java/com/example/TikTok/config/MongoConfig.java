@@ -6,7 +6,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
-//mongodb+srv://chatdb:chatdb123456@chatdb.ryiyft8.mongodb.net/tiktok_chat?retryWrites=true&w=majority&appName=chatdb
 @Configuration
 @EnableMongoRepositories(basePackages = "com.example.TikTok.repository")
 public class MongoConfig {
