@@ -1,9 +1,6 @@
 package com.example.TikTok.service;
 
-import com.example.TikTok.dto.request.LoginRequest;
-import com.example.TikTok.dto.request.RefreshTokenRequest;
-import com.example.TikTok.dto.request.RegisterRequest;
-import com.example.TikTok.dto.request.ResetPasswordRequest;
+import com.example.TikTok.dto.request.*;
 import com.example.TikTok.dto.response.AuthResponse;
 import com.example.TikTok.entity.PasswordResetToken;
 import com.example.TikTok.entity.RefreshToken;
@@ -13,7 +10,12 @@ import com.example.TikTok.repository.PasswordResetTokenRepository;
 import com.example.TikTok.repository.RefreshTokenRepository;
 import com.example.TikTok.repository.UserRepository;
 import com.example.TikTok.security.JwtUtils;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.Random;
 import java.util.UUID;
 
@@ -35,6 +38,50 @@ public class AuthService {
     private final EmailService emailService;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final String googleClientId = "107896090043-tnbgj32mnppi94u3cf82be7enavj37k3.apps.googleusercontent.com";
+    public AuthResponse loginWithGoogle(GoogleLoginRequest request){
+        GoogleIdTokenVerifier verifier= new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+                // truyen client id vao de gg biet day la cua web tiktak
+                .setAudience(Collections.singletonList(googleClientId))
+                .build();
+        try{
+            GoogleIdToken idToken=verifier.verify(request.getIdToken());
+            if (idToken!=null){
+                GoogleIdToken.Payload payload=idToken.getPayload();
+                String email=payload.getEmail();
+                String name= (String) payload.get("name");
+                String pictureUrl=(String) payload.get("picture");
+                // tim user trong db theo email xem co khong
+                User user=userRepository.findByEmail(email).orElse(null);
+                if (user==null){
+                    user =new User();
+                    user.setEmail(email);
+                    user.setFullname(name);
+                    user.setAvatar(pictureUrl);
+                    String prefix=email.split("@")[0];
+                    // tao username theo email vaf random 4 ky tu di kem
+                    user.setUsername(prefix+"_"+UUID.randomUUID().toString().substring(0,4));
+                    user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+                    user=userRepository.save(user);
+
+                }
+                // neu da co hoac vua tao xong thi cap token
+                String accessToken= jwtUtils.generateToken(user);
+                RefreshToken refreshToken=createRefreshToken(user);
+                return AuthResponse.builder()
+                        .username(user.getUsername())
+                        .token(accessToken)
+                        .refreshToken(refreshToken.getRefreshToken())
+                        .message("Đăng nhập bằng Google thành công!").build();
+            }else{
+                throw new RuntimeException("Mã xác thực Google không hợp lệ hoặc đã hết hạn!");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Lỗi trong quá trình kết nối với máy chủ Google: " + e.getMessage());
+        }
+    }
     public AuthResponse register(RegisterRequest request){
         if(userRepository.existsByUsername(request.getUsername()))
         {

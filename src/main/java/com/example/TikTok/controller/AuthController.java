@@ -18,6 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
+    @PostMapping("/google")
+    public  ResponseEntity<AuthResponse> loginWithGoogle(@RequestBody GoogleLoginRequest request){
+        return  ResponseEntity.ok(authService.loginWithGoogle(request));
+    }
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestBody @Valid RegisterRequest request){
         return ResponseEntity.ok(authService.register(request));
