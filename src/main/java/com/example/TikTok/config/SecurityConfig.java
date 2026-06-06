@@ -50,10 +50,9 @@ public class SecurityConfig {
                                 "/uploads/**",
                                 "/api/videos/feed/**",
                                 "/api/videos/*/view",
-                                "/api/search/**"
+                                "/api/search/**",
+                                "/error"
                         ).permitAll()
-
-
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
