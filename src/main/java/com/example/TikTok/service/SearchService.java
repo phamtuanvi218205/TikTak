@@ -75,6 +75,7 @@ public class SearchService {
             }
             List<VideoResponse> videoResponses=new ArrayList<>();
             if (!isBlocked){
+                // Nếu KHÔNG BỊ CHẶN, thì mới lấy top 15 video nhiều tim nhất của người đó ra để hiển thị xem trước.
                 List<Video> videos=videoRepository.findTop15ByUserOrderByLikeCountDesc(targetUser);
                 videoResponses=videoMapper.lstResponse(videos);
             }
@@ -89,9 +90,13 @@ public class SearchService {
         }
         List<Video> matchedVideosList = videoRepository.findByTitleContainingIgnoreCase(keyword);
         if (currentUser!=null){
+
             final User finalCurrentUser = currentUser;
             matchedVideosList = matchedVideosList.stream()
-                    .filter(v -> !blockRepository.existsByBlockerAndBlocked(finalCurrentUser, v.getUser()) &&
+                    .filter(v ->
+                            // Lọc bỏ những video của người mà TÔI ĐÃ CHẶN
+                            !blockRepository.existsByBlockerAndBlocked(finalCurrentUser, v.getUser()) &&
+                                    // Lọc bỏ những video của người ĐÃ CHẶN TÔI
                             !blockRepository.existsByBlockerAndBlocked(v.getUser(), finalCurrentUser))
                     .collect(Collectors.toList());
         }

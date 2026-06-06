@@ -31,7 +31,7 @@ public class AuthController {
         AuthResponse response = authService.login(request);
 
 
-        log.info("🔑 Login thành công! Token sinh ra là: {}", response.getToken());
+        log.info(" Login thành công! Token sinh ra là: {}", response.getToken());
 
 
         return ResponseEntity.ok(response);

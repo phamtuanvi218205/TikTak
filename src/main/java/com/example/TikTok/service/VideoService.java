@@ -28,9 +28,7 @@ import ws.schild.jave.info.VideoSize;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
@@ -124,7 +122,6 @@ public class VideoService {
 
 
     }
-    //  HÀM UPLOAD CHÍNH dung thuật toán nén video tạm cmt vì server render free không đủ ram để chạy
 //    public VideoResponse uploadVideo(UploadVideoRequest request) throws IOException {
 //        String currentUsername= SecurityContextHolder.getContext().getAuthentication().getName();
 //        User user= userRepository.findByUsername(currentUsername).orElseThrow(()->new RuntimeException("Lỗi người dùng không tồn tại"));
@@ -207,7 +204,7 @@ public class VideoService {
             throw new RuntimeException("Lỗi upload lên Cloudinary: " + e.getMessage());
         }
 
-        // Lưu vào Database (Giữ nguyên logic cũ của bạn)
+        // Lưu vào Database
         Video video=Video.builder()
                 .title(request.getTitle())
                 .videoUrl(videoCloudUrl)
@@ -233,7 +230,7 @@ public class VideoService {
         }
         // Lấy danh sách ID video từ Session của người dùng
         List<Long> playListID= (List<Long>) session.getAttribute(SESSION_KEY);
-        // Nếu chưa có (người mới) hoặc Frontend yêu cầu reset (đã xem hết) -> Tạo list mới
+        // Nếu chưa có (người mới) hoặc Frontend yêu cầu reset (đã xem hết), Tạo list mới
         if (playListID==null||playListID.isEmpty()||reset){
             if (currentUser!=null){
                 playListID=videoRepository.findVideoIdsExcludingBlocked(currentUser.getId());
@@ -270,7 +267,7 @@ public class VideoService {
         List<Long> pageID=playListID.subList(start,end);
         // Query lấy thông tin chi tiết Video từ DB theo list ID này
         List<Video> videos=videoRepository.findAllById(pageID);
-        // SẮP XẾP LẠI: findAllById không trả về đúng thứ tự ID truyền vào
+        // findAllById không trả về đúng thứ tự ID truyền vào
         // map lại để đảm bảo thứ tự ngẫu nhiên đã lưu trong session
         Map<Long,Video> videoMap=videos.stream().collect(Collectors.toMap(Video::getId, Function.identity()));
         List<Video> sortedVideo= new ArrayList<>();
